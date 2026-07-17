@@ -1,0 +1,483 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>RN FITNESS App</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+   <link rel="stylesheet" href="styles.css">
+    <link rel="apple-touch-icon" href="logo.png">
+    <link rel="icon" href="logo.png">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
+    <!-- 1. Cargamos las librerías de Firebase preparadas para HTML directo -->
+<script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-auth-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-app.js"></script>
+<script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-auth.js"></script>
+<script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-firestore.js"></script>
+<!-- 2. Tu configuración personalizada y lógica de bloqueo -->
+<script>
+  // Tus credenciales reales de RN FITNESS
+  const firebaseConfig = {
+    apiKey: "AIzaSyAz-SheUpUys4z_z4cf32B-T29NSx7epGw",
+    authDomain: "rn-fitness-97201.firebaseapp.com",
+    projectId: "rn-fitness-97201",
+    storageBucket: "rn-fitness-97201.firebasestorage.app",
+    messagingSenderId: "360552955791",
+    appId: "1:360552955791:web:3e29109e778dc257c615fa",
+    measurementId: "G-CM7BNTEMBW"
+  };
+
+  // Inicializamos Firebase y la Base de Datos (Firestore)
+  firebase.initializeApp(firebaseConfig);
+  const db = firebase.firestore();
+
+  // ID del cliente que usará esta app (puedes cambiarlo si vendes otra copia)
+  const MI_ID_PROVEEDOR = "gimnasio_valencia"; 
+
+ // Escuchar cambios en la base de datos en tiempo real
+  db.collection("licencias").doc(MI_ID_PROVEEDOR).onSnapshot((doc) => {
+      if (doc.exists) {
+          const datos = doc.data();
+          if (datos.activo === false) {
+              // Si está inactivo, creamos y mostramos la pantalla de bloqueo encima de todo
+              if (!document.getElementById("pantalla-bloqueo-realtime")) {
+                  const overlay = document.createElement("div");
+                  overlay.id = "pantalla-bloqueo-realtime";
+                  overlay.innerHTML = `
+                      <div style="position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; background-color: #111; color: white; font-family: sans-serif; text-align: center; padding: 20px; display: flex; flex-direction: column; justify-content: center; align-items: center; z-index: 999999;">
+                          <h1 style="color: #ff4444; font-size: 28px; margin-bottom: 10px;">⚠️ Servicio Suspendido</h1>
+                          <p style="font-size: 16px; color: #aaa; max-width: 400px; line-height: 1.5;">Esta aplicación ha sido desactivada temporalmente por administración.</p>
+                          <p style="font-size: 13px; color: #666; margin-top: 20px;">Por favor, póngase en contacto con el soporte de RN FITNESS.</p>
+                      </div>
+                  `;
+                  document.body.appendChild(overlay);
+              }
+          } else {
+              // Si vuelve a estar activo (true), removemos el bloqueo de inmediato sin reiniciar la app
+              const overlay = document.getElementById("pantalla-bloqueo-realtime");
+              if (overlay) {
+                  overlay.remove();
+              }
+          }
+      } else {
+          console.log("El proveedor no existe en la base de datos de Firebase.");
+      }
+      
+  });
+  
+</script>
+</head>
+<body>
+
+    <div id="rn-modal-overlay" class="modal-hidden">
+        <div class="rn-modal-box">
+            <h3 id="rn-modal-title">Título</h3>
+            <p id="rn-modal-message">Mensaje</p>
+            <input type="text" id="rn-modal-input" class="dark-input modal-input" style="display:none;" autocomplete="off">
+            <div class="rn-modal-actions">
+                <button id="rn-modal-cancel" class="btn-modal-cancel">Cancelar</button>
+                <button id="rn-modal-confirm" class="btn-modal-confirm">Aceptar</button>
+            </div>
+        </div>
+    </div>
+
+    <div id="splash-screen">
+        <div class="splash-content">
+            <img src="RN.png" id="splash-logo" alt="RN FITNESS Logo" onerror="this.style.display='none'">
+            <h1 id="splash-text">RN <span class="accent-text">FITNESS</span></h1>
+        </div>
+    </div>
+
+    <div id="main-wrapper" class="app-container main-content-hidden">
+
+       <div id="view-onboarding" class="app-view view-hidden" style="padding-top: 15px;">
+           <div style="text-align: center; margin: 10px 15px 25px 15px;">
+                <a href="https://drive.google.com/uc?export=download&id=1z3bvxeTWbTqSpd2cLduPamTvLZvySKXh" download style="background-color: #28a745; color: white; padding: 12px 20px; text-decoration: none; font-weight: bold; border-radius: 25px; display: inline-block; font-family: 'Inter', sans-serif; font-size: 14px; box-shadow: 0 4px 6px rgba(0,0,0,0.3); width: 100%; box-sizing: border-box;">
+                    🤖 Descargar App para Android (APK)
+                </a>
+            </div>
+          <div class="detail-header-area" style="text-align: center; margin-bottom: 30px;">
+                <h1>CONFIGURACIÓN <span class="accent-text">INICIAL</span></h1>
+                <p>Diseñemos tu perfil de entrenamiento ideal</p>
+            </div>
+
+            <div id="seccion-auth" style="text-align: center; margin: 0 15px 30px 15px; padding: 20px 15px; background: #111; border-radius: 15px; border: 1px solid #222; font-family: 'Inter', sans-serif;">
+                <p id="auth-status-text" style="color: #aaa; font-size: 14px; margin-bottom: 15px;">
+                    Inicia sesión o regístrate para guardar tu rutina:
+                </p>
+                
+                <div id="auth-form-inputs" style="display: flex; flex-direction: column; gap: 12px; align-items: center; max-width: 320px; margin: 0 auto;">
+                    <input type="email" id="auth-email" placeholder="Correo electrónico" style="width: 100%; padding: 12px; background: #1a1a1a; border: 1px solid #333; border-radius: 8px; color: white; font-size: 14px; outline: none;">
+                    <input type="password" id="auth-password" placeholder="Contraseña (mínimo 6 caracteres)" style="width: 100%; padding: 12px; background: #1a1a1a; border: 1px solid #333; border-radius: 8px; color: white; font-size: 14px; outline: none;">
+                    
+                    <div style="display: flex; gap: 10px; width: 100%; margin-top: 5px;">
+                        <button type="button" onclick="iniciarSesion()" style="flex: 1; background: #28a745; color: white; border: none; padding: 12px; font-weight: bold; border-radius: 8px; font-size: 14px; cursor: pointer;">
+                            Entrar
+                        </button>
+                        <button type="button" onclick="registrarUsuario()" style="flex: 1; background: #333; color: white; border: 1px solid #444; padding: 12px; font-weight: bold; border-radius: 8px; font-size: 14px; cursor: pointer;">
+                            Registrarse
+                        </button>
+                    </div>
+                    
+                    <button type="button" onclick="document.getElementById('seccion-auth').style.display = 'none'" style="background: transparent; color: #888; border: none; font-size: 13px; text-decoration: underline; cursor: pointer; margin-top: 5px;">
+                        Omitir por ahora
+                    </button>
+                </div>
+
+                <div id="user-info" style="display: none; align-items: center; justify-content: space-between; background: #1a1a1a; padding: 10px 15px; border-radius: 10px; border: 1px solid #28a745;">
+                    <div style="display: flex; align-items: center; gap: 10px;">
+                        <div style="width: 35px; height: 35px; border-radius: 50%; background: #28a745; color: white; display: flex; align-items: center; justify-content: center; font-weight: bold; font-size: 16px;">
+                            👤
+                        </div>
+                        <span id="user-name" style="color: white; font-size: 14px; font-weight: bold; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; max-width: 150px;">Usuario</span>
+                    </div>
+                    <button type="button" onclick="cerrarSesion()" style="background: #ff4444; color: white; border: none; padding: 6px 12px; border-radius: 20px; font-size: 12px; cursor: pointer; font-weight: bold;">
+                        Salir
+                    </button>
+                </div>
+            </div>
+            <div class="profile-form">
+                <div class="form-group" style="margin-bottom: 20px;">
+                    <label>1. Etapa (Hombre)</label>
+                    <select id="onboarding-genero" class="dark-input">
+                        <option value="Adolescente">Adolescente (13 a 16 años)</option>
+                        <option value="Adulto">Adulto (17+ años)</option>
+                    </select>
+                </div>
+
+                <div class="form-group" style="margin-bottom: 20px;">
+                    <label>2. Edad</label>
+                    <input type="number" id="onboarding-edad" class="dark-input" placeholder="Ej. 25" min="1" max="120">
+                </div>
+
+                <div class="form-group" style="margin-bottom: 20px;">
+                    <label>3. Nivel de Experiencia</label>
+                    <select id="onboarding-experiencia" class="dark-input">
+                        <option value="Principiante">Principiante (0 a 2 años)</option>
+                        <option value="Intermedio">Intermedio (2 a 6 años)</option>
+                        <option value="Avanzado">Avanzado (más de 6 años)</option>
+                    </select>
+                </div>
+
+                <div class="form-group" style="margin-bottom: 30px;">
+                    <label>4. Objetivo Principal</label>
+                    <select id="onboarding-objetivo" class="dark-input">
+                        <option value="Ganar masa muscular">Ganar masa muscular</option>
+                        <option value="Perder peso">Perder peso</option>
+                        <option value="Funcionalidad total">Funcionalidad total</option>
+                    </select>
+                </div>
+
+                <button class="btn-start-workout" style="position: relative;" onclick="procesarOnboardingUsuario()">Generar Mi Perfil</button>
+            </div>
+        </div>
+        
+        <div id="view-home" class="app-view view-hidden">
+            <header class="top-nav">
+                <div class="logo-text">RN <span>FITNESS</span></div>
+                <div class="user-badges">
+                    <div class="badge-premium" onclick="cambiarSeccion('coach')">PREMIUM</div>
+                    <canvas id="canvas-settings" width="24" height="24" class="clickable" onclick="cambiarSeccion('settings')"></canvas>
+                </div>
+          </header>
+
+            <section class="section-container">
+                <div class="section-header">
+                    <h2>¿Qué entrenamos hoy?</h2>
+                </div>
+               <div class="workout-carousel">
+                    <div class="hero-card" id="card-pecho" onclick="abrirDetalleRutina('empujes1')">
+                        <span class="day-tag">Día 1</span>
+                        <div class="hero-info">
+                            <h1>EMPUJES</h1>
+                            <p>Pecho, Hombro y Tríceps</p>
+                        </div>
+                    </div>
+                    
+                    <div class="hero-card" id="card-espalda" onclick="abrirDetalleRutina('jalones1')">
+                        <span class="day-tag">Día 2</span>
+                        <div class="hero-info">
+                            <h1>JALONES</h1>
+                            <p>Espalda y Bíceps</p>
+                        </div>
+                    </div>
+                    
+                    <div class="hero-card" id="card-pierna" onclick="abrirDetalleRutina('pierna')">
+                        <span class="day-tag">Día 3</span>
+                        <div class="hero-info">
+                            <h1>PIERNA</h1>
+                            <p>Cuádriceps, Isquios y Pantorrilla</p>
+                        </div>
+                    </div>
+                    
+                    <div class="hero-card" id="card-brazo" onclick="abrirDetalleRutina('empujes2')">
+                        <span class="day-tag">Día 4</span>
+                        <div class="hero-info">
+                            <h1>EMPUJES 2</h1>
+                            <p>Variación Pecho, Hombro y Tríceps</p>
+                        </div>
+                    </div>
+                    
+                    <div class="hero-card" id="card-espalda2" onclick="abrirDetalleRutina('jalones2')">
+                        <span class="day-tag">Día 5</span>
+                        <div class="hero-info">
+                            <h1>JALONES 2</h1>
+                            <p>Variación Espalda y Bíceps</p>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <section class="section-container">
+                <div class="section-header">
+                    <h2>Tus Entrenamientos</h2>
+                </div>
+                <div id="custom-workouts-list"></div>
+            </section>
+        </div>
+
+        <div id="view-detail" class="app-view view-hidden">
+            <div class="back-header">
+                <button class="btn-back" onclick="cambiarSeccion('home')">✕ Volver</button>
+            </div>
+            <div class="detail-header-area">
+                <h1 id="detail-routine-title">Rutina</h1>
+                <p id="detail-routine-meta">0 ejercicios</p>
+            </div>
+            <div class="distribution-section">
+                <h3>Distribución Muscular</h3>
+                <div class="distribution-carousel" id="detail-distribution-container"></div>
+            </div>
+            <div class="exercises-section">
+                <div class="exercises-header-row" id="dynamic-exercises-header"></div>
+                <div id="detail-exercises-list"></div>
+            </div>
+            <div class="action-footer">
+                <button id="btn-start-dynamic" class="btn-start-workout">▶ Empezar Entrenamiento</button>
+            </div>
+        </div>
+
+        <div id="view-profile" class="app-view view-hidden">
+            <div class="detail-header-area" style="text-align: center; margin-top: 15px; margin-bottom: 15px;">
+                <h1 style="font-size: 32px; font-weight: 900; color: #ffffff;">Tu Perfil</h1>
+                <p style="color: #888888; font-size: 14px;">Configura tus datos biométricos</p>
+            </div>
+
+           <div class="profile-avatar-container" style="text-align: center; margin-bottom: 20px;">
+                <canvas id="canvas-profile-avatar" width="100" height="100" onclick="document.getElementById('input-foto-perfil').click()" style="margin: 0 auto; display: block; border-radius: 50%; cursor: pointer;"></canvas>
+                <input type="file" id="input-foto-perfil" accept="image/*" style="display: none;" onchange="procesarNuevaFoto(event)">
+                <span class="btn-edit-photo" onclick="document.getElementById('input-foto-perfil').click()" style="color: #ff0000; font-size: 12px; font-weight: 800; letter-spacing: 1px; text-transform: uppercase; cursor: pointer; display: block; margin-top: 10px;">CAMBIAR FOTO</span>
+            </div>
+            <div class="settings-list" style="background: transparent; border: none; padding: 0 15px;">
+                
+                <div class="form-group" style="margin-bottom: 15px;">
+                    <label style="font-size: 11px; font-weight: 700; color: #888; text-transform: uppercase; margin-bottom: 5px; display: block;">NOMBRE DEL ATLETA</label>
+                    <input type="text" id="perfil-nombre" class="dark-input" placeholder="Atleta RN" value="Atleta RN">
+                </div>
+
+                <div class="form-row" style="margin-bottom: 15px; display: flex; gap: 10px;">
+                    <div class="form-group" style="flex: 1;">
+                        <label style="font-size: 11px; font-weight: 700; color: #888; text-transform: uppercase; margin-bottom: 5px; display: block;">PESO (KG)</label>
+                        <input type="number" id="perfil-peso" class="dark-input" placeholder="0">
+                    </div>
+                    <div class="form-group" style="flex: 1;">
+                        <label style="font-size: 11px; font-weight: 700; color: #888; text-transform: uppercase; margin-bottom: 5px; display: block;">ALTURA (CM)</label>
+                        <input type="number" id="perfil-altura" class="dark-input" placeholder="0">
+                    </div>
+                </div>
+
+                <div class="form-row" style="margin-bottom: 30px; display: flex; gap: 10px;">
+                 <div class="form-group" style="flex: 1;">
+                        <label style="font-size: 11px; font-weight: 700; color: #888; text-transform: uppercase; margin-bottom: 5px; display: block;">ETAPA</label>
+                        <select id="perfil-genero" class="dark-input" style="appearance: none; cursor: pointer;">
+                            <option value="Adolescente">Adolescente (13 a 16 años)</option>
+                            <option value="Adulto">Adulto (17+ años)</option>
+                        </select>
+                    </div>
+                    <div class="form-group" style="flex: 1;">
+                        <label style="font-size: 11px; font-weight: 700; color: #888; text-transform: uppercase; margin-bottom: 5px; display: block;">AÑOS ENTRENANDO</label>
+                        <input type="number" id="perfil-anos" class="dark-input" placeholder="0">
+                    </div>
+                </div>
+
+           </div>
+
+            <div style="text-align: center; margin-bottom: 30px; padding: 0 15px; display: flex; flex-direction: column; gap: 15px;">
+                <button onclick="generarReportePDF()" style="background: #1a1a1a; color: #ff8833; border: 1px solid #ff8833; padding: 14px; font-size: 14px; font-weight: 800; border-radius: 8px; cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 10px; width: 100%; text-transform: uppercase; letter-spacing: 1px; font-family: 'Inter', sans-serif;">
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                        <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
+                        <polyline points="7 10 12 15 17 10"></polyline>
+                        <line x1="12" y1="15" x2="12" y2="3"></line>
+                    </svg>
+                    Descargar Reporte (PDF)
+                </button>
+
+                                <button class="btn-start-workout" onclick="guardarPerfil()" style="width: 100%; position: relative;">Guardar Cambios</button>
+            </div>
+        </div>
+
+        <div id="view-coach" class="app-view view-hidden">
+            <div class="back-header">
+                <button class="btn-back" onclick="cambiarSeccion('home')">✕ Volver</button>
+            </div>
+            
+            <div class="detail-header-area" style="text-align: center; margin-bottom: 10px;">
+                <div class="profile-avatar-container" style="margin: 10px 0 20px 0;">
+                    <div id="coach-avatar" style="width: 90px; height: 90px; display: flex; align-items: center; justify-content: center; font-size: 24px; font-weight: 900; color: #ff0000; border: 2px solid #ff0000; text-shadow: 0 0 10px rgba(255,0,0,0.5); border-radius: 50%;">
+                        REX
+                    </div>
+                </div>
+                <h1>David Flores</h1>
+                <p style="color: #ff0000; font-weight: 800; text-transform: uppercase; font-size: 12px; letter-spacing: 1px;">Entrenador Profesional</p>
+            </div>
+
+            <div class="settings-list">
+                <div class="settings-item" style="flex-direction: column; align-items: flex-start; cursor: default;">
+                    <h3 style="color: #ffffff; font-size: 15px; font-weight: 800; margin-bottom: 8px;">PERFIL PROFESIONAL</h3>
+                    <p style="color: #aaaaaa; font-size: 13px; line-height: 1.5; font-weight: 500;">
+                        Hola, soy David Flores (Rex), entrenador profesional.<br><br>
+                        <span style="color: #555; font-style: italic;">preparador fisico profesional certificado, especialista en suplementacion y farmacologia deportiva, licenciado en biologia y estudiante de administracion deportiva apasionado por ayudar a mis clientes a alcanzar su maximo potencial a traves de planes de entrenamiento y nutricion personalizados, basados en la ciencia y la experiencia. Contactame para transformar tu cuerpo y tu vida!!.</span>
+                    </p>
+                </div>
+
+                <div class="settings-item" style="flex-direction: column; align-items: flex-start; cursor: default;">
+                    <h3 style="color: #ffffff; font-size: 15px; font-weight: 800; margin-bottom: 8px;">PLANES DE ENTRENAMIENTO</h3>
+                    <p style="color: #aaaaaa; font-size: 13px; line-height: 1.5; font-weight: 500;">
+                        <span style="color: #555; font-style: italic;">[Información sobre los planes actualmente en pausa].</span>
+                    </p>
+                </div>
+            </div>
+
+            <div style="margin-top: 40px; text-align: center;">
+                <p style="color: #888888; font-size: 12px; font-weight: 600; text-transform: uppercase; margin-bottom: 15px;">¿Te interesa llevar tu físico al siguiente nivel?</p>
+                
+                <a href="https://wa.me/573158383942?text=Hola%20Rex,%20estoy%20interesado%20en%20obtener%20m%C3%A1s%20informaci%C3%B3n%20sobre%20tus%20asesor%C3%ADas." target="_blank" style="text-decoration: none;">
+                    <button class="btn-start-workout" style="width: 100%; position: relative; transform: none; left: auto; bottom: auto; display: flex; justify-content: center; align-items: center; gap: 10px;">
+                        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#000000" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                            <path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 16.92z"></path>
+                        </svg>
+                        Escríbeme para más info
+                    </button>
+                </a>
+            </div>
+        </div>
+
+        <div id="view-settings" class="app-view view-hidden">
+            <div class="back-header"><button class="btn-back" onclick="cambiarSeccion('home')">✕ Volver</button></div>
+            <div class="detail-header-area">
+                <h1>Ajustes</h1>
+                <p>Configuración de la aplicación</p>
+            </div>
+            <div class="settings-list">
+                
+                <div class="settings-item" onclick="resetearApp()">
+                    <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#ff8800" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                        <path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"></path><path d="M3 3v5h5"></path>
+                    </svg>
+                    <span style="color:#ff8800;">Restablecer App (Modo Test)</span>
+                </div>
+
+                <div class="settings-item" onclick="mostrarModalGenerico('Notificaciones', 'Configura tus alertas de entrenamiento.')">
+                    <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#ffffff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                        <path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"></path><path d="M13.73 21a2 2 0 0 1-3.46 0"></path>
+                    </svg>
+                    Notificaciones
+                </div>
+                
+                <div class="settings-item" onclick="mostrarModalGenerico('Tema Visual', 'Ajusta los parámetros visuales de la interfaz.')">
+                    <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#ffffff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                        <path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"></path>
+                    </svg>
+                    Tema Visual
+                </div>
+                
+                <div class="settings-item" onclick="mostrarModalGenerico('Unidades', 'Cambia el sistema de peso y medidas.')">
+                    <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#ffffff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                        <circle cx="12" cy="12" r="10"></circle><line x1="8" y1="12" x2="16" y2="12"></line><line x1="12" y1="8" x2="12" y2="16"></line>
+                    </svg>
+                    Unidades
+                </div>
+            </div>
+        </div>
+
+        <div id="view-active-workout" class="app-view view-hidden">
+            <div class="active-workout-control-header" style="display: flex; justify-content: space-between; align-items: center; padding: 10px 5px; margin-bottom: 15px; border-bottom: 1px solid #222;">
+                <button onclick="cancelarEntrenamiento()" style="background: none; border: none; color: #ff3333; font-size: 20px; font-weight: bold; cursor: pointer; padding: 5px 10px;">✕</button>
+                <div id="workout-timer" style="font-size: 24px; font-weight: bold; font-family: monospace; color: #fff; background: #111; padding: 4px 14px; border-radius: 6px; border: 1px solid #333;">00:00</div>
+                <button onclick="terminarEntrenamiento()" style="background: #ff3333; color: #fff; border: none; padding: 8px 16px; border-radius: 6px; font-weight: bold; cursor: pointer; font-size: 14px;">Terminar</button>
+            </div>
+
+            <div class="exercise-navigator" id="exercise-navigator"></div>
+
+            <div class="active-exercise-content">
+                <div class="active-actions">
+                    <button class="btn-active-action" onclick="mostrarModalGenerico('Guía', 'El video de este ejercicio estará disponible pronto.')">▶ Guía</button>
+                    <button class="btn-active-action btn-danger-action" onclick="cancelarEntrenamiento()">🗑 Borrar</button>
+                </div>
+
+                <h2 id="active-exercise-title">Nombre Ejercicio</h2>
+                <p id="active-exercise-note">Agregar una nota...</p>
+
+                <div class="sets-table-container">
+                    <div class="sets-header">
+                        <div class="col-ser">SER...</div>
+                        <div class="col-prev">PREVIA</div>
+                      <div class="col-input" id="label-kg">KG</div>
+                        <div class="col-input" id="label-reps">REPES</div>
+                        <div class="col-check"></div>
+                    </div>
+                    <div id="sets-rows-container"></div>
+                    <button class="btn-add-set" onclick="añadirSerieExtra()">+ Añadir Serie</button>
+                </div>
+            </div>
+        </div>
+
+        <div id="view-summary" class="app-view view-hidden">
+            <div class="detail-header-area" style="text-align: center; margin-top: 30px;">
+                <h1>¡Entrenamiento Completado!</h1>
+                <p>Modo Bestia: Desactivado 🏆</p>
+            </div>
+            
+            <div class="summary-stats-box">
+                <div class="stat-item">
+                    <h3 id="summary-time">00:00</h3>
+                    <span>Tiempo</span>
+                </div>
+                <div class="stat-item">
+                    <h3 id="summary-vol">0 kg</h3>
+                    <span>Volumen Total</span>
+                </div>
+            </div>
+
+            <div class="improvements-section">
+                <h3>Resumen de Marcas</h3>
+                <div id="summary-improvements-list"></div>
+            </div>
+
+            <button class="btn-start-workout" style="margin-top: 40px; position: relative;" onclick="cambiarSeccion('home')">Volver al Inicio</button>
+        </div>
+
+        <nav class="bottom-nav" id="main-bottom-nav">
+            <div class="nav-item active" id="nav-btn-home" onclick="cambiarSeccion('home')">
+                <canvas id="nav-icon-train" width="24" height="24"></canvas>
+                <span class="nav-label">Entrenar</span>
+            </div>
+            <div class="nav-item center-btn" onclick="crearRutinaManualCompleta()">
+                <div class="plus-circle"><canvas id="nav-icon-plus" width="24" height="24"></canvas></div>
+            </div>
+            <div class="nav-item" id="nav-btn-profile" onclick="cambiarSeccion('profile')">
+                <canvas id="nav-icon-profile" width="24" height="24"></canvas>
+                <span class="nav-label">Perfil</span>
+            </div>
+        </nav>
+
+    </div>
+
+    <script src="app.js"></script>
+</body>
+</html>
